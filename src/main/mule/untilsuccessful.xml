@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9c58424b-c93b-4068-83e0-fb84b997f311" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="f4ee236d-4617-42e1-9f60-98c71caa84aa" >
+		<http:request-connection host="localhost" port="8081" />
+	</http:request-config>
+	<flow name="untilsuccessfulFlow" doc:id="ee78aa31-dc34-463a-a5dd-108cac903252" >
+		<http:listener doc:name="Listener" doc:id="306af60a-4abd-4d61-87cf-a74224269669" config-ref="HTTP_Listener_config" path="/until"/>
+		<ee:transform doc:name="Transform Message" doc:id="000986ef-30ed-407c-a162-68f075c420a2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var a=[
+	{
+		"student":{
+			"name":"sai",
+			"id":123
+		},
+		"age":21
+	},
+	{
+		"marks":100
+	}
+]
+---
+(a map (key,index) ->
+{
+	"studentdetails":key.student,
+	"age":key.age,
+	"marks":key.marks
+})  ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="7da64ba0-9217-4898-9c78-8f7104a29e15" millisBetweenRetries="2000">
+			<http:request method="GET" doc:name="Request" doc:id="aa90d2af-b986-4139-bb35-dcd4f2d1c0d4" config-ref="HTTP_Request_configuration" path="/until2"/>
+		</until-successful>
+		<logger level="INFO" doc:name="Logger" doc:id="308d4f42-7a70-4a09-af23-5713deac0369" message="#[payload]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="6e373788-7152-4ca8-a5b0-31b4dae06984" message='"2nd logger"'/>
+	</flow>
+	<flow name="untilsuccessfulFlow1" doc:id="7ea5f998-7449-43c3-9603-03d59d11d908" >
+		<http:listener doc:name="Listener" doc:id="1eabcee8-c14c-419a-887f-61f5e2d5d253" config-ref="HTTP_Listener_config" path="/until2"/>
+		<logger level="INFO" doc:name="Logger" doc:id="8507009f-0e03-422b-8c90-cd8549439f36" message="log1"/>
+		<set-variable value="sai" doc:name="Set Variable" doc:id="54e1283b-7031-4c76-9b1f-d48f9133def5" variableName="name"/>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="fcfab85e-92f8-48a3-bc66-c51fae5d764d" millisBetweenRetries="2000">
+			<file:write doc:id="770ff662-91b4-4c01-8324-414462f571b5" path="C:\untilsuccessful\output.">
+				<file:content ><![CDATA[#[vars.name]]]></file:content>
+			</file:write>
+		</until-successful>
+		<logger level="INFO" doc:name="Logger" doc:id="78c5c9a0-9cf7-46f0-ace8-d87f17f5d69f" message="log2"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="99f6aa84-7309-4e71-9b88-62703b51c4d2" type="FILE:RETRY_EXHAUSTED">
+				<set-payload value='#["payload in error"]' doc:name="Set Payload" doc:id="638cad6d-f417-4ce7-9576-dc9f250704dc" />
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
